@@ -56,4 +56,517 @@
 
         .control-btn:disabled {
             opacity: 0.5;
-            cursor:
+            cursor: not-allowed;
+        }
+
+        .instrument-selector {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .instrument-btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        .instrument-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .instrument-btn.active {
+            background: white;
+            color: #1e3c72;
+            border-color: white;
+            font-weight: bold;
+        }
+
+        .sequencer-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .current-instrument {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .grid-container {
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .sequencer-grid {
+            display: grid;
+            gap: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 10px;
+            min-width: fit-content;
+        }
+
+        .grid-header {
+            display: grid;
+            grid-template-columns: 100px repeat(16, 50px);
+            gap: 2px;
+            margin-bottom: 5px;
+        }
+
+        .beat-label {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .grid-row {
+            display: grid;
+            grid-template-columns: 100px repeat(16, 50px);
+            gap: 2px;
+        }
+
+        .note-label {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .grid-cell {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .grid-cell:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .grid-cell.active {
+            background: #4a90e2;
+            border-color: #6db3f2;
+            box-shadow: 0 0 10px rgba(74, 144, 226, 0.6);
+        }
+
+        .grid-cell.playing {
+            animation: pulse-cell 0.2s ease-out;
+        }
+
+        @keyframes pulse-cell {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            }
+        }
+
+        .beat-indicator {
+            height: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .beat-position {
+            height: 100%;
+            background: #4a90e2;
+            border-radius: 3px;
+            width: 6.25%;
+            transition: left 0.1s linear;
+            position: absolute;
+            box-shadow: 0 0 10px rgba(74, 144, 226, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Beat Sequencer - 126 BPM</h1>
+        
+        <div class="controls">
+            <button class="control-btn" id="startBtn">START</button>
+            <button class="control-btn" id="stopBtn">STOP</button>
+            <button class="control-btn" id="clearBtn">CLEAR CURRENT</button>
+        </div>
+
+        <div class="instrument-selector" id="instrumentSelector"></div>
+
+        <div class="sequencer-container">
+            <div class="current-instrument" id="currentInstrument">Select an instrument</div>
+            <div class="beat-indicator">
+                <div class="beat-position" id="beatPosition"></div>
+            </div>
+            <div class="grid-container">
+                <div id="sequencerGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const beatInterval = 60000 / 126; // 126 BPM
+        let intervalId = null;
+        let currentBeat = 0;
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Define instruments with their notes/sounds
+        const instruments = {
+            'kick': {
+                name: 'Kick Drum',
+                notes: ['Kick'],
+                type: 'percussion'
+            },
+            'snare': {
+                name: 'Snare',
+                notes: ['Snare'],
+                type: 'percussion'
+            },
+            'hihat': {
+                name: 'Hi-Hat',
+                notes: ['Closed', 'Open'],
+                type: 'percussion'
+            },
+            'clap': {
+                name: 'Clap',
+                notes: ['Clap'],
+                type: 'percussion'
+            },
+            'bass': {
+                name: 'Bass',
+                notes: ['A1', 'C2', 'D2', 'E2', 'G2', 'A2', 'C3', 'D3'],
+                frequencies: [55, 65.41, 73.42, 82.41, 98, 110, 130.81, 146.83],
+                type: 'synth'
+            },
+            'lead': {
+                name: 'Lead Synth',
+                notes: ['A3', 'C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5'],
+                frequencies: [220, 261.63, 293.66, 329.63, 392, 440, 523.25, 587.33],
+                type: 'synth'
+            },
+            'pad': {
+                name: 'Pad',
+                notes: ['Am', 'C', 'Dm', 'Em', 'G'],
+                chords: [
+                    [220, 261.63, 329.63],
+                    [261.63, 329.63, 392],
+                    [146.83, 220, 293.66],
+                    [164.81, 246.94, 329.63],
+                    [196, 246.94, 293.66]
+                ],
+                type: 'chord'
+            },
+            'hey': {
+                name: 'Voice: "Hey"',
+                notes: ['Hey'],
+                type: 'voice',
+                text: 'hey',
+                pitch: 1,
+                rate: 1
+            },
+            'tough': {
+                name: 'Deep Voice: "That\'s Tough"',
+                notes: ['That\'s Tough'],
+                type: 'voice',
+                text: "that's tough",
+                pitch: 0.1,
+                rate: 0.85
+            }
+        };
+
+        // Store patterns for each instrument
+        const patterns = {};
+        Object.keys(instruments).forEach(key => {
+            patterns[key] = Array(instruments[key].notes.length).fill(null).map(() => Array(16).fill(false));
+        });
+
+        let currentInstrument = 'kick';
+
+        // Initialize instrument selector
+        function initInstrumentSelector() {
+            const selector = document.getElementById('instrumentSelector');
+            Object.keys(instruments).forEach(key => {
+                const btn = document.createElement('button');
+                btn.className = 'instrument-btn';
+                btn.textContent = instruments[key].name;
+                btn.dataset.instrument = key;
+                btn.addEventListener('click', function() {
+                    selectInstrument(key, this);
+                });
+                if (key === currentInstrument) btn.classList.add('active');
+                selector.appendChild(btn);
+            });
+        }
+
+        // Select instrument
+        function selectInstrument(instrumentKey, btnElement) {
+            currentInstrument = instrumentKey;
+            document.querySelectorAll('.instrument-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            renderGrid();
+        }
+
+        // Render the sequencer grid
+        function renderGrid() {
+            const grid = document.getElementById('sequencerGrid');
+            const instrument = instruments[currentInstrument];
+            document.getElementById('currentInstrument').textContent = instrument.name;
+
+            let html = '<div class="grid-header"><div class="beat-label"></div>';
+            for (let i = 1; i <= 16; i++) {
+                html += `<div class="beat-label">${i}</div>`;
+            }
+            html += '</div>';
+
+            instrument.notes.forEach((note, noteIndex) => {
+                html += '<div class="grid-row">';
+                html += `<div class="note-label">${note}</div>`;
+                for (let beat = 0; beat < 16; beat++) {
+                    const isActive = patterns[currentInstrument][noteIndex][beat];
+                    html += `<div class="grid-cell ${isActive ? 'active' : ''}" 
+                             data-note="${noteIndex}" 
+                             data-beat="${beat}"></div>`;
+                }
+                html += '</div>';
+            });
+
+            grid.innerHTML = html;
+
+            // Add click listeners to cells
+            document.querySelectorAll('.grid-cell').forEach(cell => {
+                cell.addEventListener('click', function() {
+                    const noteIndex = parseInt(this.dataset.note);
+                    const beat = parseInt(this.dataset.beat);
+                    toggleCell(noteIndex, beat);
+                });
+            });
+        }
+
+        // Toggle cell
+        function toggleCell(noteIndex, beat) {
+            patterns[currentInstrument][noteIndex][beat] = !patterns[currentInstrument][noteIndex][beat];
+            renderGrid();
+        }
+
+        // Sound generation functions
+        function playKick() {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.setValueAtTime(150, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            gain.gain.setValueAtTime(1, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            osc.start(audioContext.currentTime);
+            osc.stop(audioContext.currentTime + 0.5);
+        }
+
+        function playSnare() {
+            const bufferSize = audioContext.sampleRate * 0.2;
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioContext.sampleRate * 0.05));
+            }
+            const noise = audioContext.createBufferSource();
+            noise.buffer = buffer;
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 1000;
+            const gain = audioContext.createGain();
+            gain.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioContext.destination);
+            noise.start(audioContext.currentTime);
+            noise.stop(audioContext.currentTime + 0.2);
+        }
+
+        function playHiHat(open = false) {
+            const bufferSize = audioContext.sampleRate * (open ? 0.3 : 0.1);
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioContext.sampleRate * (open ? 0.1 : 0.02)));
+            }
+            const noise = audioContext.createBufferSource();
+            noise.buffer = buffer;
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 7000;
+            const gain = audioContext.createGain();
+            gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + bufferSize / audioContext.sampleRate);
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioContext.destination);
+            noise.start(audioContext.currentTime);
+            noise.stop(audioContext.currentTime + bufferSize / audioContext.sampleRate);
+        }
+
+        function playClap() {
+            const bufferSize = audioContext.sampleRate * 0.05;
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1);
+            }
+            const noise = audioContext.createBufferSource();
+            noise.buffer = buffer;
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 1500;
+            const gain = audioContext.createGain();
+            gain.gain.setValueAtTime(0.7, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioContext.destination);
+            noise.start(audioContext.currentTime);
+            noise.stop(audioContext.currentTime + 0.05);
+        }
+
+        function playNote(frequency, duration = 0.3, waveType = 'sawtooth') {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.type = waveType;
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            osc.start(audioContext.currentTime);
+            osc.stop(audioContext.currentTime + duration);
+        }
+
+        function playChord(frequencies, duration = 0.5) {
+            frequencies.forEach(freq => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.type = 'sine';
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+                gain.gain.setValueAtTime(0.08, audioContext.currentTime);
+                gain.gain.linearRampToValueAtTime(0.05, audioContext.currentTime + duration);
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + duration);
+            });
+        }
+
+        function speakText(text, pitch, rate) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.pitch = pitch;
+            utterance.rate = rate;
+            utterance.volume = 1;
+            speechSynthesis.speak(utterance);
+        }
+
+        // Play sounds based on active patterns
+        function playBeat() {
+            currentBeat = (currentBeat % 16);
+            
+            // Update beat indicator
+            const beatPos = document.getElementById('beatPosition');
+            beatPos.style.left = `${(currentBeat / 16) * 100}%`;
+
+            // Play each instrument's pattern
+            Object.keys(instruments).forEach(instrumentKey => {
+                const instrument = instruments[instrumentKey];
+                const pattern = patterns[instrumentKey];
+
+                pattern.forEach((notePattern, noteIndex) => {
+                    if (notePattern[currentBeat]) {
+                        // Play sound
+                        switch(instrumentKey) {
+                            case 'kick':
+                                playKick();
+                                break;
+                            case 'snare':
+                                playSnare();
+                                break;
+                            case 'hihat':
+                                playHiHat(noteIndex === 1);
+                                break;
+                            case 'clap':
+                                playClap();
+                                break;
+                            case 'bass':
+                                playNote(instrument.frequencies[noteIndex], 0.3, 'sawtooth');
+                                break;
+                            case 'lead':
+                                playNote(instrument.frequencies[noteIndex], 0.2, 'square');
+                                break;
+                            case 'pad':
+                                playChord(instrument.chords[noteIndex], 0.5);
+                                break;
+                            case 'hey':
+                            case 'tough':
+                                speakText(instrument.text, instrument.pitch, instrument.rate);
+                                break;
+                        }
+                    }
+                });
+            });
+
+            currentBeat++;
+        }
+
+        // Control functions
+        document.getElementById('startBtn').addEventListener('click', () => {
+            if (intervalId) return;
+            currentBeat = 0;
+            playBeat();
+            intervalId = setInterval(playBeat, beatInterval);
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+                currentBeat = 0;
+                document.getElementById('beatPosition').style.left = '0%';
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+            }
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            patterns[currentInstrument] = Array(instruments[currentInstrument].notes.length).fill(null).map(() => Array(16).fill(false));
+            renderGrid();
+        });
+
+        // Initialize
+        initInstrumentSelector();
+        renderGrid();
+        document.getElementById('stopBtn').disabled = true;
+    </script>
+</body>
+</html>
