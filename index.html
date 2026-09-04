@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beat Sequencer - 126 BPM</title>
+    <title>Web Music Sequencer</title>
     <style>
         * {
             margin: 0;
@@ -12,9 +12,9 @@
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
             padding: 20px;
             min-height: 100vh;
         }
@@ -26,547 +26,621 @@
 
         h1 {
             text-align: center;
-            margin-bottom: 20px;
-            font-size: 32px;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
         .controls {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .control-btn {
-            padding: 15px 40px;
-            font-size: 18px;
-            background: white;
-            color: #1e3c72;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s;
-            margin: 0 10px;
-            font-weight: bold;
-        }
-
-        .control-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-        }
-
-        .control-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .instrument-selector {
             display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
             flex-wrap: wrap;
             justify-content: center;
+            align-items: center;
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
             gap: 10px;
-            margin-bottom: 30px;
         }
 
-        .instrument-btn {
-            padding: 12px 24px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 25px;
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 16px;
-        }
-
-        .instrument-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .instrument-btn.active {
-            background: white;
-            color: #1e3c72;
-            border-color: white;
+        .control-group label {
             font-weight: bold;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        select, input[type="range"] {
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        select option {
+            background: #16213e;
+            color: #fff;
+        }
+
+        input[type="range"] {
+            width: 200px;
+        }
+
+        .bpm-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+
+        .resolution-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .resolution-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .resolution-btn.active {
+            background: #4ecdc4;
+            color: #1a1a2e;
+        }
+
+        .resolution-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .play-button {
+            padding: 15px 40px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 5px;
+            background: #4ecdc4;
+            color: #1a1a2e;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .play-button:hover {
+            background: #45b8b0;
+            transform: scale(1.05);
+        }
+
+        .play-button.playing {
+            background: #ff6b6b;
         }
 
         .sequencer-container {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
         }
 
-        .current-instrument {
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 24px;
+        .instrument-label {
             font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            color: #4ecdc4;
         }
 
         .grid-container {
-            overflow-x: auto;
-            padding-bottom: 10px;
+            display: inline-block;
+            position: relative;
         }
 
-        .sequencer-grid {
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 100%;
+            background: rgba(78, 205, 196, 0.3);
+            pointer-events: none;
+            transition: left 0.05s linear;
+            z-index: 1;
+        }
+
+        .grid {
             display: grid;
             gap: 2px;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 10px;
-            min-width: fit-content;
-        }
-
-        .grid-header {
-            display: grid;
-            grid-template-columns: 100px repeat(16, 50px);
-            gap: 2px;
-            margin-bottom: 5px;
-        }
-
-        .beat-label {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 10px;
-            text-align: center;
-            font-weight: bold;
+            background: rgba(255,255,255,0.1);
+            padding: 2px;
             border-radius: 5px;
-            font-size: 14px;
+            position: relative;
+            z-index: 2;
         }
 
-        .grid-row {
-            display: grid;
-            grid-template-columns: 100px repeat(16, 50px);
+        .cell {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.1s;
+            border-radius: 3px;
+        }
+
+        .cell:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .cell.active {
+            background: #4ecdc4;
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.6);
+        }
+
+        .note-labels {
+            position: absolute;
+            left: -60px;
+            top: 2px;
+            display: flex;
+            flex-direction: column;
             gap: 2px;
         }
 
         .note-label {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 10px;
+            height: 40px;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-end;
+            padding-right: 10px;
             font-weight: bold;
-            border-radius: 5px;
-            font-size: 14px;
+            color: #4ecdc4;
+            font-size: 0.9em;
         }
 
-        .grid-cell {
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.2s;
+        .beat-labels {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 5px;
+            padding-left: 2px;
         }
 
-        .grid-cell:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.5);
-        }
-
-        .grid-cell.active {
-            background: #4a90e2;
-            border-color: #6db3f2;
-            box-shadow: 0 0 10px rgba(74, 144, 226, 0.6);
-        }
-
-        .grid-cell.playing {
-            animation: pulse-cell 0.2s ease-out;
-        }
-
-        @keyframes pulse-cell {
-            0%, 100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.1);
-                box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
-            }
-        }
-
-        .beat-indicator {
-            height: 5px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
-            margin: 10px 0;
-            position: relative;
-        }
-
-        .beat-position {
-            height: 100%;
-            background: #4a90e2;
-            border-radius: 3px;
-            width: 6.25%;
-            transition: left 0.1s linear;
-            position: absolute;
-            box-shadow: 0 0 10px rgba(74, 144, 226, 0.8);
+        .beat-label {
+            width: 40px;
+            text-align: center;
+            font-size: 0.8em;
+            color: rgba(255,255,255,0.6);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎵 Beat Sequencer - 126 BPM</h1>
+        <h1>🎵 Web Music Sequencer</h1>
         
         <div class="controls">
-            <button class="control-btn" id="startBtn">START</button>
-            <button class="control-btn" id="stopBtn">STOP</button>
-            <button class="control-btn" id="clearBtn">CLEAR CURRENT</button>
+            <div class="control-group">
+                <label>Instrument</label>
+                <select id="instrumentSelect">
+                    <option value="kick">Kick Drum</option>
+                    <option value="snare">Snare</option>
+                    <option value="hihat">Hi-Hat</option>
+                    <option value="clap">Clap</option>
+                    <option value="bass">Electric Bass</option>
+                    <option value="lead">Lead Synth</option>
+                    <option value="pad">Pad</option>
+                    <option value="trumpet">Trumpet Choir</option>
+                    <option value="choir">Voice Choir</option>
+                    <option value="guitar">Guitar Strum</option>
+                    <option value="hey">Voice: "Hey"</option>
+                    <option value="tough">Voice: "That's Tough"</option>
+                    <option value="weird">Voice: "That's a Weird Thing to Say"</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Musical Scale</label>
+                <select id="scaleSelect">
+                    <option value="ionian">Ionian (Major)</option>
+                    <option value="dorian">Dorian</option>
+                    <option value="phrygian">Phrygian</option>
+                    <option value="lydian">Lydian</option>
+                    <option value="mixolydian">Mixolydian</option>
+                    <option value="aeolian">Aeolian (Minor)</option>
+                    <option value="locrian">Locrian</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>BPM: <span class="bpm-display" id="bpmDisplay">126</span></label>
+                <input type="range" id="bpmSlider" min="60" max="200" value="126">
+            </div>
+
+            <div class="control-group">
+                <label>Grid Resolution</label>
+                <div class="resolution-buttons">
+                    <button class="resolution-btn" data-resolution="4">4th</button>
+                    <button class="resolution-btn active" data-resolution="8">8th</button>
+                    <button class="resolution-btn" data-resolution="16">16th</button>
+                </div>
+            </div>
+
+            <button class="play-button" id="playButton">▶ Play</button>
         </div>
 
-        <div class="instrument-selector" id="instrumentSelector"></div>
-
         <div class="sequencer-container">
-            <div class="current-instrument" id="currentInstrument">Select an instrument</div>
-            <div class="beat-indicator">
-                <div class="beat-position" id="beatPosition"></div>
-            </div>
+            <div class="instrument-label" id="currentInstrumentLabel">Kick Drum</div>
+            <div class="beat-labels" id="beatLabels"></div>
             <div class="grid-container">
-                <div id="sequencerGrid"></div>
+                <div class="note-labels" id="noteLabels"></div>
+                <div class="progress-bar" id="progressBar"></div>
+                <div class="grid" id="grid"></div>
             </div>
         </div>
     </div>
 
     <script>
-        const beatInterval = 60000 / 126; // 126 BPM
-        let intervalId = null;
-        let currentBeat = 0;
+        // Audio Context
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-        // Define instruments with their notes/sounds
-        const instruments = {
-            'kick': {
-                name: 'Kick Drum',
-                notes: ['Kick'],
-                type: 'percussion'
-            },
-            'snare': {
-                name: 'Snare',
-                notes: ['Snare'],
-                type: 'percussion'
-            },
-            'hihat': {
-                name: 'Hi-Hat',
-                notes: ['Closed', 'Open'],
-                type: 'percussion'
-            },
-            'clap': {
-                name: 'Clap',
-                notes: ['Clap'],
-                type: 'percussion'
-            },
-            'bass': {
-                name: 'Bass',
-                notes: ['A1', 'C2', 'D2', 'E2', 'G2', 'A2', 'C3', 'D3'],
-                frequencies: [55, 65.41, 73.42, 82.41, 98, 110, 130.81, 146.83],
-                type: 'synth'
-            },
-            'lead': {
-                name: 'Lead Synth',
-                notes: ['A3', 'C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5'],
-                frequencies: [220, 261.63, 293.66, 329.63, 392, 440, 523.25, 587.33],
-                type: 'synth'
-            },
-            'pad': {
-                name: 'Pad',
-                notes: ['Am', 'C', 'Dm', 'Em', 'G'],
-                chords: [
-                    [220, 261.63, 329.63],
-                    [261.63, 329.63, 392],
-                    [146.83, 220, 293.66],
-                    [164.81, 246.94, 329.63],
-                    [196, 246.94, 293.66]
-                ],
-                type: 'chord'
-            },
-            'hey': {
-                name: 'Voice: "Hey"',
-                notes: ['Hey'],
-                type: 'voice',
-                text: 'hey',
-                pitch: 1,
-                rate: 1
-            },
-            'tough': {
-                name: 'Deep Voice: "That\'s Tough"',
-                notes: ['That\'s Tough'],
-                type: 'voice',
-                text: "that's tough",
-                pitch: 0.1,
-                rate: 0.85
-            }
-        };
-
-        // Store patterns for each instrument
-        const patterns = {};
-        Object.keys(instruments).forEach(key => {
-            patterns[key] = Array(instruments[key].notes.length).fill(null).map(() => Array(16).fill(false));
-        });
-
+        
+        // Configuration
+        let bpm = 126;
+        let currentBeat = 0;
+        let isPlaying = false;
+        let intervalId = null;
         let currentInstrument = 'kick';
-
-        // Initialize instrument selector
-        function initInstrumentSelector() {
-            const selector = document.getElementById('instrumentSelector');
-            Object.keys(instruments).forEach(key => {
-                const btn = document.createElement('button');
-                btn.className = 'instrument-btn';
-                btn.textContent = instruments[key].name;
-                btn.dataset.instrument = key;
-                btn.addEventListener('click', function() {
-                    selectInstrument(key, this);
-                });
-                if (key === currentInstrument) btn.classList.add('active');
-                selector.appendChild(btn);
-            });
-        }
-
-        // Select instrument
-        function selectInstrument(instrumentKey, btnElement) {
-            currentInstrument = instrumentKey;
-            document.querySelectorAll('.instrument-btn').forEach(btn => btn.classList.remove('active'));
-            btnElement.classList.add('active');
-            renderGrid();
-        }
-
-        // Render the sequencer grid
-        function renderGrid() {
-            const grid = document.getElementById('sequencerGrid');
-            const instrument = instruments[currentInstrument];
-            document.getElementById('currentInstrument').textContent = instrument.name;
-
-            let html = '<div class="grid-header"><div class="beat-label"></div>';
-            for (let i = 1; i <= 16; i++) {
-                html += `<div class="beat-label">${i}</div>`;
+        let currentScale = 'ionian';
+        let gridResolution = 8;
+        const beatsPerMeasure = 16;
+        
+        // Musical scales (intervals from root)
+        const scales = {
+            ionian: [0, 2, 4, 5, 7, 9, 11, 12],
+            dorian: [0, 2, 3, 5, 7, 9, 10, 12],
+            phrygian: [0, 1, 3, 5, 7, 8, 10, 12],
+            lydian: [0, 2, 4, 6, 7, 9, 11, 12],
+            mixolydian: [0, 2, 4, 5, 7, 9, 10, 12],
+            aeolian: [0, 2, 3, 5, 7, 8, 10, 12],
+            locrian: [0, 1, 3, 5, 6, 8, 10, 12]
+        };
+        
+        // Instrument configurations
+        const instruments = {
+            kick: { type: 'drum', baseFreq: 150, notes: 1 },
+            snare: { type: 'drum', baseFreq: 200, notes: 1 },
+            hihat: { type: 'drum', baseFreq: 8000, notes: 1 },
+            clap: { type: 'drum', baseFreq: 1000, notes: 1 },
+            bass: { type: 'melodic', baseNote: 36, notes: 8 },
+            lead: { type: 'melodic', baseNote: 60, notes: 8 },
+            pad: { type: 'melodic', baseNote: 48, notes: 8 },
+            trumpet: { type: 'melodic', baseNote: 55, notes: 8 },
+            choir: { type: 'melodic', baseNote: 48, notes: 8 },
+            guitar: { type: 'melodic', baseNote: 40, notes: 8 },
+            hey: { type: 'voice', notes: 1 },
+            tough: { type: 'voice', notes: 1 },
+            weird: { type: 'voice', notes: 1 }
+        };
+        
+        // Pattern storage for each instrument
+        const patterns = {};
+        Object.keys(instruments).forEach(inst => {
+            const rows = instruments[inst].notes;
+            patterns[inst] = Array(rows).fill(null).map(() => Array(beatsPerMeasure).fill(false));
+        });
+        
+        // Voice sample management
+        let voicePlaying = null;
+        
+        // DOM Elements
+        const grid = document.getElementById('grid');
+        const noteLabels = document.getElementById('noteLabels');
+        const beatLabels = document.getElementById('beatLabels');
+        const progressBar = document.getElementById('progressBar');
+        const playButton = document.getElementById('playButton');
+        const bpmSlider = document.getElementById('bpmSlider');
+        const bpmDisplay = document.getElementById('bpmDisplay');
+        const instrumentSelect = document.getElementById('instrumentSelect');
+        const scaleSelect = document.getElementById('scaleSelect');
+        const currentInstrumentLabel = document.getElementById('currentInstrumentLabel');
+        
+        // Initialize grid
+        function initGrid() {
+            grid.innerHTML = '';
+            noteLabels.innerHTML = '';
+            beatLabels.innerHTML = '';
+            
+            const rows = instruments[currentInstrument].notes;
+            const cols = beatsPerMeasure;
+            
+            grid.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+            grid.style.gridTemplateRows = `repeat(${rows}, 40px)`;
+            
+            // Beat labels
+            for (let col = 0; col < cols; col++) {
+                const label = document.createElement('div');
+                label.className = 'beat-label';
+                label.textContent = col + 1;
+                beatLabels.appendChild(label);
             }
-            html += '</div>';
-
-            instrument.notes.forEach((note, noteIndex) => {
-                html += '<div class="grid-row">';
-                html += `<div class="note-label">${note}</div>`;
-                for (let beat = 0; beat < 16; beat++) {
-                    const isActive = patterns[currentInstrument][noteIndex][beat];
-                    html += `<div class="grid-cell ${isActive ? 'active' : ''}" 
-                             data-note="${noteIndex}" 
-                             data-beat="${beat}"></div>`;
+            
+            // Note labels and grid cells
+            for (let row = 0; row < rows; row++) {
+                // Note label
+                const label = document.createElement('div');
+                label.className = 'note-label';
+                if (instruments[currentInstrument].type === 'melodic') {
+                    const noteIndex = rows - 1 - row;
+                    label.textContent = getNoteNameForRow(noteIndex);
+                } else if (instruments[currentInstrument].type === 'voice') {
+                    label.textContent = '🎤';
+                } else {
+                    label.textContent = '🥁';
                 }
-                html += '</div>';
-            });
-
-            grid.innerHTML = html;
-
-            // Add click listeners to cells
-            document.querySelectorAll('.grid-cell').forEach(cell => {
-                cell.addEventListener('click', function() {
-                    const noteIndex = parseInt(this.dataset.note);
-                    const beat = parseInt(this.dataset.beat);
-                    toggleCell(noteIndex, beat);
-                });
-            });
+                noteLabels.appendChild(label);
+                
+                // Grid cells
+                for (let col = 0; col < cols; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    
+                    if (patterns[currentInstrument][row][col]) {
+                        cell.classList.add('active');
+                    }
+                    
+                    cell.addEventListener('click', () => toggleCell(row, col));
+                    grid.appendChild(cell);
+                }
+            }
         }
-
-        // Toggle cell
-        function toggleCell(noteIndex, beat) {
-            patterns[currentInstrument][noteIndex][beat] = !patterns[currentInstrument][noteIndex][beat];
-            renderGrid();
+        
+        function getNoteNameForRow(rowIndex) {
+            const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const scaleIntervals = scales[currentScale];
+            const interval = scaleIntervals[rowIndex % scaleIntervals.length];
+            const octaveOffset = Math.floor(rowIndex / scaleIntervals.length);
+            const midiNote = instruments[currentInstrument].baseNote + interval + (octaveOffset * 12);
+            const noteName = noteNames[midiNote % 12];
+            const octave = Math.floor(midiNote / 12) - 1;
+            return `${noteName}${octave}`;
         }
-
-        // Sound generation functions
-        function playKick() {
+        
+        function toggleCell(row, col) {
+            patterns[currentInstrument][row][col] = !patterns[currentInstrument][row][col];
+            const cell = grid.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            cell.classList.toggle('active');
+        }
+        
+        // Audio synthesis
+        function playDrum(frequency, duration = 0.1) {
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
-            osc.connect(gain);
-            gain.connect(audioContext.destination);
-            osc.frequency.setValueAtTime(150, audioContext.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            gain.gain.setValueAtTime(1, audioContext.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            osc.start(audioContext.currentTime);
-            osc.stop(audioContext.currentTime + 0.5);
-        }
-
-        function playSnare() {
-            const bufferSize = audioContext.sampleRate * 0.2;
-            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioContext.sampleRate * 0.05));
-            }
-            const noise = audioContext.createBufferSource();
-            noise.buffer = buffer;
-            const filter = audioContext.createBiquadFilter();
-            filter.type = 'highpass';
-            filter.frequency.value = 1000;
-            const gain = audioContext.createGain();
-            gain.gain.setValueAtTime(0.5, audioContext.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-            noise.connect(filter);
-            filter.connect(gain);
-            gain.connect(audioContext.destination);
-            noise.start(audioContext.currentTime);
-            noise.stop(audioContext.currentTime + 0.2);
-        }
-
-        function playHiHat(open = false) {
-            const bufferSize = audioContext.sampleRate * (open ? 0.3 : 0.1);
-            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioContext.sampleRate * (open ? 0.1 : 0.02)));
-            }
-            const noise = audioContext.createBufferSource();
-            noise.buffer = buffer;
-            const filter = audioContext.createBiquadFilter();
-            filter.type = 'highpass';
-            filter.frequency.value = 7000;
-            const gain = audioContext.createGain();
-            gain.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + bufferSize / audioContext.sampleRate);
-            noise.connect(filter);
-            filter.connect(gain);
-            gain.connect(audioContext.destination);
-            noise.start(audioContext.currentTime);
-            noise.stop(audioContext.currentTime + bufferSize / audioContext.sampleRate);
-        }
-
-        function playClap() {
-            const bufferSize = audioContext.sampleRate * 0.05;
-            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = (Math.random() * 2 - 1);
-            }
-            const noise = audioContext.createBufferSource();
-            noise.buffer = buffer;
-            const filter = audioContext.createBiquadFilter();
-            filter.type = 'bandpass';
-            filter.frequency.value = 1500;
-            const gain = audioContext.createGain();
-            gain.gain.setValueAtTime(0.7, audioContext.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
-            noise.connect(filter);
-            filter.connect(gain);
-            gain.connect(audioContext.destination);
-            noise.start(audioContext.currentTime);
-            noise.stop(audioContext.currentTime + 0.05);
-        }
-
-        function playNote(frequency, duration = 0.3, waveType = 'sawtooth') {
-            const osc = audioContext.createOscillator();
-            const gain = audioContext.createGain();
-            osc.type = waveType;
-            osc.connect(gain);
-            gain.connect(audioContext.destination);
+            
+            osc.type = frequency > 1000 ? 'square' : 'sine';
             osc.frequency.setValueAtTime(frequency, audioContext.currentTime);
-            gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            gain.gain.setValueAtTime(0.5, audioContext.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-            osc.start(audioContext.currentTime);
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.start();
             osc.stop(audioContext.currentTime + duration);
         }
-
-        function playChord(frequencies, duration = 0.5) {
-            frequencies.forEach(freq => {
-                const osc = audioContext.createOscillator();
-                const gain = audioContext.createGain();
-                osc.type = 'sine';
-                osc.connect(gain);
-                gain.connect(audioContext.destination);
-                osc.frequency.setValueAtTime(freq, audioContext.currentTime);
-                gain.gain.setValueAtTime(0.08, audioContext.currentTime);
-                gain.gain.linearRampToValueAtTime(0.05, audioContext.currentTime + duration);
-                osc.start(audioContext.currentTime);
-                osc.stop(audioContext.currentTime + duration);
-            });
-        }
-
-        function speakText(text, pitch, rate) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.pitch = pitch;
-            utterance.rate = rate;
-            utterance.volume = 1;
-            speechSynthesis.speak(utterance);
-        }
-
-        // Play sounds based on active patterns
-        function playBeat() {
-            currentBeat = (currentBeat % 16);
+        
+        function playMelodicNote(instrument, midiNote, duration = 0.3) {
+            const frequency = 440 * Math.pow(2, (midiNote - 69) / 12);
             
-            // Update beat indicator
-            const beatPos = document.getElementById('beatPosition');
-            beatPos.style.left = `${(currentBeat / 16) * 100}%`;
-
-            // Play each instrument's pattern
-            Object.keys(instruments).forEach(instrumentKey => {
-                const instrument = instruments[instrumentKey];
-                const pattern = patterns[instrumentKey];
-
-                pattern.forEach((notePattern, noteIndex) => {
-                    if (notePattern[currentBeat]) {
-                        // Play sound
-                        switch(instrumentKey) {
-                            case 'kick':
-                                playKick();
-                                break;
-                            case 'snare':
-                                playSnare();
-                                break;
-                            case 'hihat':
-                                playHiHat(noteIndex === 1);
-                                break;
-                            case 'clap':
-                                playClap();
-                                break;
-                            case 'bass':
-                                playNote(instrument.frequencies[noteIndex], 0.3, 'sawtooth');
-                                break;
-                            case 'lead':
-                                playNote(instrument.frequencies[noteIndex], 0.2, 'square');
-                                break;
-                            case 'pad':
-                                playChord(instrument.chords[noteIndex], 0.5);
-                                break;
-                            case 'hey':
-                            case 'tough':
-                                speakText(instrument.text, instrument.pitch, instrument.rate);
-                                break;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+            
+            // Different waveforms for different instruments
+            const waveforms = {
+                bass: 'sawtooth',
+                lead: 'square',
+                pad: 'sine',
+                trumpet: 'sawtooth',
+                choir: 'triangle',
+                guitar: 'sawtooth'
+            };
+            
+            osc.type = waveforms[instrument] || 'sine';
+            osc.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(instrument === 'bass' ? 800 : 2000, audioContext.currentTime);
+            
+            const volume = instrument === 'pad' ? 0.15 : 0.3;
+            gain.gain.setValueAtTime(volume, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.start();
+            osc.stop(audioContext.currentTime + duration);
+        }
+        
+        function playVoiceSample(voiceType) {
+            // Stop any currently playing voice
+            if (voicePlaying) {
+                voicePlaying.stop();
+            }
+            
+            // Synthesize voice-like sounds
+            const phrases = {
+                hey: { freq: 400, duration: 0.15 },
+                tough: { freq: 150, duration: 0.4 },
+                weird: { freq: 350, duration: 0.5 }
+            };
+            
+            const config = phrases[voiceType];
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+            
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(config.freq, audioContext.currentTime);
+            
+            // Add formant-like filtering for voice quality
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(config.freq * 2, audioContext.currentTime);
+            filter.Q.setValueAtTime(5, audioContext.currentTime);
+            
+            gain.gain.setValueAtTime(0.4, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + config.duration);
+            
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.start();
+            osc.stop(audioContext.currentTime + config.duration);
+            
+            voicePlaying = osc;
+        }
+        
+        // Playback engine
+        function playBeat() {
+            const beatTime = (60 / bpm) * (4 / gridResolution);
+            
+            // Play all instruments at current beat
+            Object.keys(instruments).forEach(inst => {
+                const pattern = patterns[inst];
+                const config = instruments[inst];
+                
+                for (let row = 0; row < pattern.length; row++) {
+                    if (pattern[row][currentBeat]) {
+                        if (config.type === 'drum') {
+                            playDrum(config.baseFreq);
+                        } else if (config.type === 'melodic') {
+                            const noteIndex = pattern.length - 1 - row;
+                            const scaleIntervals = scales[currentScale];
+                            const interval = scaleIntervals[noteIndex % scaleIntervals.length];
+                            const octaveOffset = Math.floor(noteIndex / scaleIntervals.length);
+                            const midiNote = config.baseNote + interval + (octaveOffset * 12);
+                            playMelodicNote(inst, midiNote, beatTime * 0.8);
+                        } else if (config.type === 'voice') {
+                            playVoiceSample(inst);
                         }
                     }
-                });
+                }
             });
-
-            currentBeat++;
+            
+            // Update progress bar
+            const cellWidth = 42; // 40px + 2px gap
+            progressBar.style.left = (currentBeat * cellWidth + 2) + 'px';
+            progressBar.style.width = cellWidth + 'px';
+            
+            // Advance beat
+            currentBeat = (currentBeat + 1) % beatsPerMeasure;
         }
-
-        // Control functions
-        document.getElementById('startBtn').addEventListener('click', () => {
-            if (intervalId) return;
-            currentBeat = 0;
+        
+        function startPlayback() {
+            if (isPlaying) return;
+            
+            // Resume audio context if suspended
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            isPlaying = true;
+            playButton.textContent = '⏸ Stop';
+            playButton.classList.add('playing');
+            
+            const beatInterval = (60 / bpm) * (4 / gridResolution) * 1000;
+            
             playBeat();
             intervalId = setInterval(playBeat, beatInterval);
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('stopBtn').disabled = false;
-        });
-
-        document.getElementById('stopBtn').addEventListener('click', () => {
-            if (intervalId) {
-                clearInterval(intervalId);
-                intervalId = null;
-                currentBeat = 0;
-                document.getElementById('beatPosition').style.left = '0%';
-                document.getElementById('startBtn').disabled = false;
-                document.getElementById('stopBtn').disabled = true;
+        }
+        
+        function stopPlayback() {
+            isPlaying = false;
+            clearInterval(intervalId);
+            currentBeat = 0;
+            progressBar.style.left = '0px';
+            playButton.textContent = '▶ Play';
+            playButton.classList.remove('playing');
+            
+            if (voicePlaying) {
+                voicePlaying.stop();
+                voicePlaying = null;
+            }
+        }
+        
+        function updateBPM() {
+            bpm = parseInt(bpmSlider.value);
+            bpmDisplay.textContent = bpm;
+            
+            if (isPlaying) {
+                stopPlayback();
+                startPlayback();
+            }
+        }
+        
+        function changeInstrument() {
+            currentInstrument = instrumentSelect.value;
+            currentInstrumentLabel.textContent = instrumentSelect.options[instrumentSelect.selectedIndex].text;
+            initGrid();
+        }
+        
+        function changeScale() {
+            currentScale = scaleSelect.value;
+            if (instruments[currentInstrument].type === 'melodic') {
+                initGrid();
+            }
+        }
+        
+        function changeResolution(resolution) {
+            gridResolution = resolution;
+            
+            document.querySelectorAll('.resolution-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (isPlaying) {
+                stopPlayback();
+                startPlayback();
+            }
+        }
+        
+        // Event listeners
+        playButton.addEventListener('click', () => {
+            if (isPlaying) {
+                stopPlayback();
+            } else {
+                startPlayback();
             }
         });
-
-        document.getElementById('clearBtn').addEventListener('click', () => {
-            patterns[currentInstrument] = Array(instruments[currentInstrument].notes.length).fill(null).map(() => Array(16).fill(false));
-            renderGrid();
+        
+        bpmSlider.addEventListener('input', updateBPM);
+        instrumentSelect.addEventListener('change', changeInstrument);
+        scaleSelect.addEventListener('change', changeScale);
+        
+        document.querySelectorAll('.resolution-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const resolution = parseInt(e.target.dataset.resolution);
+                changeResolution(resolution);
+            });
         });
-
+        
         // Initialize
-        initInstrumentSelector();
-        renderGrid();
-        document.getElementById('stopBtn').disabled = true;
+        initGrid();
     </script>
 </body>
 </html>
